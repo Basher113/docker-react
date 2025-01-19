@@ -1,18 +1,37 @@
-name: Docker Image CI
-
+name: Deploy Frontend
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches: 
+      - main
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      - uses: actions/checkout@v2
+      
+      - run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: List files in build context
+        run: ls -al
+      
+      - run: docker build -t basher113/docker-react -f frontend/Dockerfile.dev frontend/
+      
+      - run: docker run -e CI=true basher113/docker-react npm test
+      
+      - name: Generate deployment package from frontend/
+        run: zip -r deploy.zip frontend/ -x '*.git*'
+
+      - name: Validate deployment package
+        run: unzip -l deploy.zip
+      
+      - name: Deploy to EB
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: docker-react
+          environment_name: Docker-react-env
+          version_label: ${{github.sha}}
+          region: ap-southeast-2
+          deployment_package: deploy.zip
