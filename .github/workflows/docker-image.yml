@@ -15,15 +15,12 @@ jobs:
       - name: List files in build context
         run: ls -al
       
-      - run: docker build -t basher113/docker-react -f frontend/Dockerfile.dev frontend/
+      - run: docker build -t basher113/docker-react -f Dockerfile.dev .
       
       - run: docker run -e CI=true basher113/docker-react npm test
       
       - name: Generate deployment package from frontend/
-        run: zip -r deploy.zip frontend/ -x '*.git*'
-
-      - name: Validate deployment package
-        run: unzip -l deploy.zip
+        run: zip -r deploy.zip . -x '*.git*'
       
       - name: Deploy to EB
         uses: einaregilsson/beanstalk-deploy@v22
